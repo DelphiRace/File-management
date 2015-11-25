@@ -1,0 +1,110 @@
+[27855] System_APService\clsSystem --> ContentReplace (13:54:15 295)
+Desc:
+內容取代錯誤
+
+------------------------------------------
+[27835] System_APService\clsSystem --> ContentReplace (13:55:05 295)
+Desc:
+內容取代錯誤
+
+------------------------------------------
+[27835] System_APService\clsSystem --> QueryData (14:16:40 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:null
+------------------------------------------
+[27854] System_APService\clsSystem --> QueryData (14:18:27 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:null
+------------------------------------------
+[27855] System_APService\clsSystem --> QueryData (14:18:37 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:null
+------------------------------------------
+[27853] System_APService\clsSystem --> QueryData (14:18:50 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:null
+------------------------------------------
+[27835] System_APService\clsSystem --> QueryData (14:19:43 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27850] System_APService\clsSystem --> QueryData (14:21:15 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27850] System_APService\clsSystem --> QueryData (14:21:16 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27850] System_APService\clsSystem --> QueryData (14:21:16 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27852] System_APService\clsSystem --> QueryData (14:22:14 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27852] System_APService\clsSystem --> QueryData (14:22:16 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27852] System_APService\clsSystem --> QueryData (14:22:16 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27854] System_APService\clsSystem --> QueryData (14:22:31 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27856] System_APService\clsSystem --> QueryData (14:22:44 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27851] System_APService\clsSystem --> QueryData (14:23:23 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27855] System_APService\clsSystem --> QueryData (14:23:56 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27853] System_APService\clsSystem --> QueryData (14:25:00 146)
+Desc:
+SQL:select * from acl_user
+Data:null
+------------------------------------------
+[27835] System_APService\clsSystem --> QueryData (14:26:26 146)
+Desc:
+SQL:select * from acl_user
+Data:[{"uuid":"1","userAc":"race","userPw":"2e2a7a2e57d1578bf33a559b20c463f6","userName":"Race","userMail":"delphi.race@gmail.com","creatDate":"2015-08-30 16:12:24","approveCode":"12345","approveStatus":"0"}]
+------------------------------------------
+[27850] System_APService\clsSystem --> QueryData (14:26:41 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:[{"uuid":"1","userAc":"race","userPw":"2e2a7a2e57d1578bf33a559b20c463f6","userName":"Race","userMail":"delphi.race@gmail.com","creatDate":"2015-08-30 16:12:24","approveCode":"12345","approveStatus":"0"}]
+------------------------------------------
+[27855] System_APService\clsSystem --> QueryData (14:28:57 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:[{"uuid":"1","userAc":"race","userPw":"2e2a7a2e57d1578bf33a559b20c463f6","userName":"Race","userMail":"delphi.race@gmail.com","creatDate":"2015-08-30 16:12:24","approveCode":"12345","approveStatus":"0"}]
+------------------------------------------
+[27853] System_APService\clsSystem --> QueryData (14:32:36 146)
+Desc:
+SQL:select * from acl_user where userAc = 'race' and userPw = md5('race')
+Data:[{"uuid":"1","userAc":"race","userPw":"2e2a7a2e57d1578bf33a559b20c463f6","userName":"Race","userMail":"delphi.race@gmail.com","creatDate":"2015-08-30 16:12:24","approveCode":"12345","approveStatus":"0"}]
+------------------------------------------

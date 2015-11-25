@@ -64,6 +64,20 @@ return array(
 					),
 				),
 			),
+            'login' => array(
+                'type'    => 'segment',
+                'options' => array(
+                    'route'    => '/login',
+                    'constraints' => array(
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id'     => '[0-9]+',
+                    ),
+                    'defaults' => array(
+                        'controller' => 'Application\Controller\Menter',
+                        'action'     => 'login',
+                    ),
+                ),
+            ),
         ),
     ),
     'service_manager' => array(

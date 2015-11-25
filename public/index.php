@@ -13,7 +13,7 @@ if (php_sapi_name() === 'cli-server') {
     }
     unset($path);
 }
-
+include('include/config.php');
 // Setup autoloading
 require 'init_autoloader.php';
 

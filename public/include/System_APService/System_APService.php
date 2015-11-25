@@ -10,12 +10,23 @@
 			include_once($systemApContent);
 			//print_r($systemApContent);
 		}
-	}
+    }else{
+        //先載入各物件
+        $systemApPath = glob( __DIR__ ."/*/*/*.php");
+        if(!empty($systemApPath)){
+            foreach($systemApPath as $systemApContent){
+                include_once($systemApContent);
+                //print_r($systemApContent);
+            }
+        }
+    }
+    
+    
 	//載入結束
 	//引用物件命名空間
 	use SystemDBService\clsDB_MySQL;
 	use SystemToolsService\clsTools;
-	use SystemTokenService\clsToken;
+	use SystemFrameService\clsFrame;
 	//引用完畢
 	
 	class clsSystem{
@@ -23,15 +34,17 @@
 		public $SystemDBService;
 		//相關工具
 		public $SystemToolsService;
-		//Token相關
-		public $SystemTokenService;
+		//相關框架設定
+		public $SystemFrameService;
 		//ini相關設定
 		public $iniSet;
 		//使用者資訊
 		public $userInfo;
+		//log file setting
+		public $logFileSetting;
 		
 		//供呼叫程式初始化設定
-		public function initialization(){
+		public function initialization($DBSection = ''){
 			@session_start();
 			
 			//相關工具設定
@@ -48,12 +61,19 @@
 
 			//取得資料庫設定值
 			$strIniFile = __DIR__ . '\\..\\connDB.ini';
+            if(!file_exists($strIniFile)){
+                $strIniFile = __DIR__ . '/../connDB.ini';
+            }
 			$sSection = 'connDB';
+            if(!$DBSection){
+                $DBSection = 'defaultDB';
+            }
 			
 			$sServer = $VTs->GetINIInfo($strIniFile,$sSection,'servername','');
 			$sUser = $VTs->GetINIInfo($strIniFile,$sSection,'user','');
 			$sPassWord = $VTs->GetINIInfo($strIniFile,$sSection,'password','');
-			$sDatabase = $VTs->GetINIInfo($strIniFile,$sSection,'defaultDB','');
+            //取得資料庫
+			$sDatabase = $VTs->GetINIInfo($strIniFile,$DBSection,'defaultDB','');
 			
 			//放到共同變數中
 			$iniSet["DBSet"]["sServer"] = $sServer;
@@ -61,6 +81,14 @@
 			$iniSet["DBSet"]["sPassWord"] = $sPassWord;
 			$iniSet["DBSet"]["sDatabase"] = $sDatabase;
 			
+			//載入LOG設定檔
+			$strIniFile = __DIR__ . '\\..\\setlog.ini';
+            if(!file_exists($strIniFile)){
+                $strIniFile = __DIR__ . '/../setlog.ini';
+            }
+            $sSection = "log";
+			$this->logFileSetting = $VTs->GetINIInfo($strIniFile,$sSection,'write','');
+
 			//存到變數，以重複利用
 			$this->SystemToolsService = $VTs;
 			//釋放
@@ -74,13 +102,6 @@
 			$this->SystemDBService = $VTc;
 			//釋放
 			$VTs = null;
-			
-			$VTs = new clsToken;
-			$this->SystemTokenService = $VTs;
-			//釋放
-			$VTs = null;
-			//結束
-			
 		}
 		
 	#這裡是SystemDBService
@@ -102,8 +123,14 @@
 			$execut = false;
 			if( !empty($sSqlText) ){
 				$execut = $this->SystemDBService->ExecuteNonQuery($sSqlText);
+				$callFunction = debug_backtrace();
+				$callFunction = $callFunction[0];
 				if(!$execut){
 					print_r('Error SQL: '.$sSqlText);
+					$this->WriteLog($callFunction["class"], $callFunction["function"], "SQL Error:".$sSqlText);
+				}
+				if($this->logFileSetting){
+					$this->WriteLog($callFunction["class"], $callFunction["function"], "SQL:".$sSqlText);
 				}
 			}
 			return $execut;
@@ -113,6 +140,11 @@
 		public function QueryData($sSqlText){
 			if( !empty($sSqlText) ){
 				$data = $this->SystemDBService->QueryData($sSqlText);
+				if($this->logFileSetting){
+					$callFunction = debug_backtrace();
+					$callFunction = $callFunction[0];
+					$this->WriteLog($callFunction["class"], $callFunction["function"], "SQL:".$sSqlText."\nData:".$this->Data2Json($data));
+				}
 			}
 			return $data;	
 		}
@@ -140,14 +172,19 @@
 		
 	#這裡是	SystemToolsService
 	#modIO
+		//讀取頁面Html檔案
+		public function GetHtmlContent($fPath){
+			return $this->SystemToolsService->GetHtmlContent($fPath);
+		}
+		
 		//讀取INI檔資料 GetINIInfo(strIniFile, sSection, sKeyName, sDefaultValue = "") As String
-		public function GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue = "",$originDataArray = false){
-			$this->SystemToolsService->GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue,$originDataArray);
+		public function GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue = "",$originDataArray = false, $process_sections = false){
+			return $this->SystemToolsService->GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue,$originDataArray,$process_sections);
 		}
 		
 		//使用cmd執行指令
 		public function cmdExecute($sCommand){
-			$this->SystemToolsService->cmdExecute($sCommand);
+			return $this->SystemToolsService->cmdExecute($sCommand);
 		}
 		
 		//建立資料夾 CreateDirectory(sPath)
@@ -156,8 +193,8 @@
 		}
 		
 		//建立檔案 CreateFile(sFileFullPath)
-		public function CreateFile($sFileFullPath){
-			$this->SystemToolsService->CreateFile($sFileFullPath);
+		public function CreateFile($sFileFullPath,$sFileContent, $writeType = "w"){
+			return $this->SystemToolsService->CreateFile($sFileFullPath,$sFileContent,$writeType);
 		}
 		
 		//複製檔案 CopyFile(sOrgFileFullPath, sOutFileFullPath)
@@ -180,10 +217,53 @@
 			$this->SystemToolsService->DelField($sFieldPath);
 		}
 		
-		//寫LOG檔 ThreadLog(clsName, funName, sDescribe = "", sEventDescribe = "", iErr = 0) ??放哪???
-		public function ThreadLog($clsName, $funName, $sDescribe = "", $sEventDescribe = "", $iErr = 0){
+        //產生ＰＤＦ檔案
+        public function Page2PDF($ChangePagePagth , $saveFileName, $zoom = 1){
+            return $this->SystemToolsService->Page2PDF($ChangePagePagth , $saveFileName, $zoom);
+        }
+        
+        
+		//寫LOG檔 ThreadLog(clsName, funName, sDescribe = "", sEventDescribe = "", iErr = 0) 
+		public function WriteLog($clsName, $funName, $sDescribe = "", $sEventDescribe = "", $iErr = 0){
+			global $callFunction;
+			//$SystemToolsService = $this->SystemToolsService;
+			$callFunction = debug_backtrace();
+			$callFunction = $callFunction[0];
+			
 			$this->SystemToolsService->ThreadLog($clsName, $funName, $sDescribe, $sEventDescribe, $iErr);
+			
+			//畫面操作事件
+			if($sEventDescribe != ""){
+				$this->SetAPPLog($sEventDescribe);
+			}
+
+			//釋放
+			$SystemDBService = null;
+			$SystemToolsService = null;
+			$callFunction = null;
 		}
+
+		//寫入使用者APP Log
+		public function SetAPPLog($sLogMsg, $sLogSource = "操作紀錄", $blCn2 = false, $iLogType = 1, $sPhyAddr = "(NULL)", $blFiahMarket = false){
+			global $SystemToolsService;
+			$SystemToolsService = $this->SystemToolsService;
+			try{
+				if(!empty($_SESSION)){
+					$uuid = $_SESSION["uuid"];
+					$sClerk = $_SESSION["ac"];
+					$cHost = $_SESSION["userName"];
+				}else{
+					$uuid = 0;
+					$sClerk = "system";
+					$cHost = "系統動作";
+				}
+				//寫入
+				$this->SystemDBService->SetAPPLog($uuid, $sClerk, $cHost, $sLogMsg, $blCn2, $sLogSource, $iLogType, $sPhyAddr);
+			}catch(Exception $error){
+				$this->WriteLog("clsTools", "SetAPPLog", $error->getMessage(), "", 1);
+			}
+		}
+
 	#modIO結束
 		
 	#modDataFormate
@@ -204,7 +284,18 @@
 		
 		//json轉換成資料轉(decode)
 		public function Json2Data($JsonData){
-			return $this->SystemToolsService->Data2Json($JsonData);
+			return $this->SystemToolsService->Json2Data($JsonData);
+		}
+		//資料內容取代
+		public function ContentReplace($processData,$replaceContent){
+			$processContent = $this->SystemToolsService->ContentReplace($processData,$replaceContent);
+			if(!$processContent){
+				$callFunction = debug_backtrace();
+				$callFunction = $callFunction[0];
+				$this->WriteLog($callFunction["class"], $callFunction["function"], "內容取代錯誤\n");
+			}else{
+				return $processContent;
+			}
 		}
 	#modDataFormate結束
 		
@@ -221,15 +312,60 @@
 			$this->SystemToolsService->debug($DataArray);
 		}
 	#modArrayDebug結束
-	#這裡是	SystemToolsService 結束
 	
-	#創建Login code & Token
-		//創建Login Code & Token
-		public function CreatLoginCodeAndToken($userID){
-			//回傳結果是一個陣列
-			return $this->SystemTokenService->CreatLoginCodeAndToken($userID);
+	#modCurl相關
+		//POST
+		public function UrlDataPost($url, $SendArray) {
+			//回傳結果是對象URL執行結果
+			return $this->SystemToolsService->UrlDataPost($url, $SendArray);
 		}
-	#創建Login code & Token 結束	
+		//GET
+		public function UrlDataGet($url) {
+			//回傳結果是對象URL執行結果
+			return $this->SystemToolsService->UrlDataGet($url);
+		}
+	#modCurl結束
+	
+	#這裡是	SystemToolsService 結束
+	#開始SystemFrameService
+		
+        //新增按鈕
+        public function CreateInsertOptionBtn($listID, $actionUrl, $processFunction = '', $BtnStyleClass = ''){
+            $btnStylePath = dirname(__DIR__) . "\\pageSetting\\styles\\option_btn\\Insert.html";
+            $BtnContent = $this->GetHtmlContent($btnStylePath);
+            
+            //回傳按鈕結果
+            return $this->SystemFrameService->CreateInsertOptionBtn($BtnContent, $listID, $actionUrl, $processFunction, $BtnStyleClass);
+        }
+        
+        //編輯按鈕
+        public function CreateModifyOptionBtn($DataArray, $actionUrl, $inputClass, $contentClass, $processFunction = '', $ActionID = 'uid', $BtnStyleClass = ''){
+            $btnStylePath = dirname(__DIR__) . "\\pageSetting\\styles\\option_btn\\Modify.html";
+            $BtnContent = $this->GetHtmlContent($btnStylePath);
+            
+            //回傳按鈕結果
+            return $this->SystemFrameService->CreateModifyOptionBtn($BtnContent, $DataArray, $actionUrl, $inputClass, $contentClass, $processFunction, $ActionID, $BtnStyleClass);
+        }
+        
+        //刪除按鈕
+        public function CreateDeleteOptionBtn($DataArray, $actionUrl, $rowID, $processFunction='', $ActionID = 'uid', $BtnStyleClass = ''){
+            $btnStylePath = dirname(__DIR__) . "\\pageSetting\\styles\\option_btn\\Delete.html";
+            $BtnContent = $this->GetHtmlContent($btnStylePath);
+            
+            //回傳按鈕結果
+            return $this->SystemFrameService->CreateDeleteOptionBtn($BtnContent, $DataArray, $actionUrl, $rowID, $processFunction, $ActionID, $BtnStyleClass);
+        }
+        
+        //刪除按鈕
+        public function CreateFinishOptionBtn($DataArray, $actionUrl, $inputClass, $contentClass, $processFunction = '', $ActionID = 'uid', $BtnStyleClass = ''){
+            $btnStylePath = dirname(__DIR__) . "\\pageSetting\\styles\\option_btn\\Finish.html";
+            $BtnContent = $this->GetHtmlContent($btnStylePath);
+            
+            //回傳按鈕結果
+            return $this->SystemFrameService->CreateFinishOptionBtn($BtnContent, $DataArray, $actionUrl, $inputClass, $contentClass, $processFunction, $ActionID, $BtnStyleClass);
+        }
+        
+	#結束SystemFrameService
 	}
 	
 	

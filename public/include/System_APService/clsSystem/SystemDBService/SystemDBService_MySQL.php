@@ -6,7 +6,7 @@
 		public $conn;
 		//CreateDBConnection(sServer, sDatabase, sUser, sPassWord) as boolean
 		//資料庫連線
-		public function CreateDBConnection($sServer,$sDatabase,$sUser,$sPassWord){			
+		public function CreateDBConnection($sServer,$sDatabase,$sUser,$sPassWord){
 			$this->conn = new \mysqli($sServer, $sUser, $sPassWord,$sDatabase);
 			if ($this->conn->connect_error) {
 				$this->conn = false;
@@ -59,7 +59,7 @@
 		}
 		
 		//資料庫轉換資料
-		private function Data2Array($DBQueryData){
+		private function Data2Array($DBQueryData, $kind=0){
 			$data = null;
 			if($DBQueryData){
 				$i=0;
@@ -86,5 +86,19 @@
 			return $data;
 		}
 		
+		//Log紀錄
+		public function SetAPPLog($iUserID, $sUserName, $sHostName, $sLogMsg, $blCn2=false, $sLogSource="操作紀錄", $iLogType=1, $sPhyAddr="(NULL)"){
+			global $SystemToolsService;
+			try{
+				$sKey = "logtime,userid,username,hostname,logsource,logtype,logmsg,phyaddr";
+				$strSQL = "insert into sys_aplog (" . $sKey . ") 
+						values('". date("Y-m-d H:i:s") . "', '" . $iUserID . "', '" . $sUserName . "', 
+						'" . $sHostName . "', '" . $sLogSource . "', ".$iLogType . ", '" . $sLogMsg . "', '"  . $sPhyAddr . "')";
+				$SystemToolsService->ThreadLog("clsDB_MySQL", "SetAPPLog", $strSQL);
+				$this->ExecuteNonQuery($strSQL);
+			}catch(Exception $error){
+				$SystemToolsService->ThreadLog("clsDB_MySQL", "SetAPPLog", $error->getMessage(), "", 1);
+			}
+		}
 	}
 ?>

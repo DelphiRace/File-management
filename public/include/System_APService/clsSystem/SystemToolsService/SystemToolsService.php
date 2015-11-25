@@ -4,16 +4,39 @@
 	
 	class clsTools {
 	#modIO
-		//讀取INI檔資料 GetINIInfo(strIniFile, sSection, sKeyName, sDefaultValue = "") As String
-		public function GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue = "",$originDataArray = false){
+		//讀取頁面Html檔案
+		public function GetHtmlContent($fPath){
+			$fContent = '';
+			if(file_exists($fPath)){
+				$fContent = file_get_contents($fPath);
+			}else{
+				$fPath = str_replace("\\","/",$fPath);
+				if(file_exists($fPath)){
+					$fContent = file_get_contents($fPath);
+				}
+			}
+			return $fContent;
 			
+		}
+		
+		//讀取INI檔資料 GetINIInfo(strIniFile, sSection, sKeyName, sDefaultValue = "") As String
+		public function GetINIInfo($strIniFile,$sSection,$sKeyName,$sDefaultValue = "",$originDataArray = false,$process_sections = false){
+            if(!file_exists($strIniFile)){
+                $strIniFile = str_replace("\\","/",$strIniFile);
+            }
 			if($originDataArray){
-				return parse_ini_file($strIniFile);
+				if(!$process_sections){
+					return parse_ini_file($strIniFile);
+				}else{
+					return parse_ini_file($strIniFile,true);
+				}
 			}else{
 				$iniContent = parse_ini_file($strIniFile,true);
-				foreach($iniContent[$sSection] as $i => $content){
-					if($i == $sKeyName){
-						return ($content)?$content:$sDefaultValue;
+				if(!empty($iniContent[$sSection])){
+					foreach($iniContent[$sSection] as $i => $content){
+						if($i == $sKeyName){
+							return ($content)?$content:$sDefaultValue;
+						}
 					}
 				}
 			}
@@ -22,7 +45,7 @@
 		//使用cmd執行指令
 		public function cmdExecute($sCommand){
 			try{
-				shell_exe($sCommand);
+				return shell_exec($sCommand);
 			}catch(Exception $error){
 				return false;
 			}
@@ -40,10 +63,12 @@
 			}
 		}
 		//建立檔案 CreateFile(sFileFullPath)
-		public function CreateFile($sFileFullPath){
+		public function CreateFile($sFileFullPath,$sFileContent,$writeType = "w"){
 			try{
-				$file = fopen($sFileFullPath);
+				$file = fopen($sFileFullPath,$writeType);
+                fwrite($file,$sFileContent);
 				fclose($file);
+                return true;
 			}catch(Exception $error){
 				return false;
 			}
@@ -130,19 +155,95 @@
 			}
 			return true;  
 		}
-		
-		//寫LOG檔 ThreadLog(clsName, funName, sDescribe = "", sEventDescribe = "", iErr = 0) ??放哪???
+        
+		//產生ＰＤＦ檔案
+        public function Page2PDF($ChangePagePagth , $saveFileName, $zoom){
+            $OSCommand = 'ver';
+            $OS = $this->cmdExecute($OSCommand);
+            $zoomStr = '';
+            if($zoom > 1 || $zoom < 1){
+                $zoomStr = '--zoom '.$zoom;
+            }
+            $wkhtmltopdfPath = dirname(__DIR__).'\\..\\..\\';
+            //return dirname(__DIR__);
+            //是ＷＩＮＤＯＷＳ
+            if($OS){
+                //組合指令
+                $wkhtmltopdfPath = $wkhtmltopdfPath.'windows_wkhtmltopdf\\wkhtmltopdf.exe';
+            }else{//不是ＷＩＮＤＯＷＳ
+                //MAC OSX
+                $OSCommand = 'sw_vers';
+                $OS = $this->cmdExecute($OSCommand);
+                //是ＭＡＣ ＯＳＸ
+                if($OS){
+                    //組合指令
+                    $wkhtmltopdfPath = str_replace("\\","/",$wkhtmltopdfPath);
+                    $wkhtmltopdfPath = $wkhtmltopdfPath.'mac_wkhtmltopdf/wkhtmltopdf';
+                }
+            }
+            
+            if(file_exists($wkhtmltopdfPath)){
+                if(strpos($saveFileName,".pdf") === false){
+                    $saveFileName .= ".pdf";
+                }
+                $saveFileName = str_replace("\\","/",$saveFileName);
+                $pdfCommand = $wkhtmltopdfPath.' '.$zoomStr.' '.$ChangePagePagth.' '.$saveFileName;
+                try{
+                    return $this->cmdExecute($pdfCommand);
+                }catch(Exception $error){
+                    return false;
+                }
+            }else{
+                return $wkhtmltopdfPath.' file is not exists';
+            }
+        }
+        
+		//寫LOG檔 ThreadLog(clsName, funName, sDescribe = "", sEventDescribe = "", iErr = 0)
 		public function ThreadLog($clsName, $funName, $sDescribe = "", $sEventDescribe = "", $iErr = 0){
-			
+			//創建檔案
+			$this->CreateLogFileName($clsName, $funName, $sDescribe, $sEventDescribe);
+		}
+
+		//創建ＬＯＧ檔案
+		private function CreateLogFileName($clsName, $funName, $sDescribe, $sEventDescribe, $sRemark = ""){
+			global $callFunction;
+			//依天創建Log檔案
+			$creatFileName = "ststem-".$this->DateTime("CTime").".log";
+
+			//處理序號
+			$sThreadID = getmypid();
+			//預備輸出內容
+			$contentStr = "";
+
+			if($sEventDescribe != ""){
+				$contentStr .= ">> ".$sEventDescribe." <<"."\n";
+			}
+
+			$contentStr .= "[".$sThreadID."] ".$clsName." --> ".$funName." (".date("H:i:s")." ".$callFunction["line"].")\n";
+			$contentStr .= "Desc:\n";
+			$contentStr .= $sDescribe."\n";
+			$contentStr .= "------------------------------------------\n";
+			$filePath = dirname(__DIR__)."\\..\\..\\..\\sysLog\\";
+			if(strpos($filePath,"/") >= 0){ //代表事ＭＡＣ或其他ＬＩＮＵＸ
+				$filePath = str_replace("\\", "/", $filePath);
+			}
+			if(!file_exists($filePath)){//資料夾不存在 要創建
+				$this->CreateDirectory($filePath);
+			}
+			//最後輸出的檔案名稱
+			$filePath = $filePath.$creatFileName;
+			$writeType = "a+";
+			//存檔
+			$this->CreateFile($filePath,$contentStr,$writeType);
 		}
 	#modIO結束
-		
+	
 	#modDataFormate
 		//日期轉換
 		public function DateTime($changeType,$Date=null){
 			$dateStr = "";
 			$dateStyle = "";
-			if($Date != null or $Date != ''){
+			if($changeType != null or $changeType != ''){
 				//先檢查日期是用哪種分割的
 				if(strpos($Date,"/") !== false){
 					$dateArr = explode("/",$Date);
@@ -151,7 +252,9 @@
 					$dateArr = explode("-",$Date);
 					$dateStyle = "-";
 				}else{//不符合現在有的格式
-					return false;
+                    if($changeType != "CTime" and $changeType != "CTime_Now"){
+                        return false;
+                    }
 				}
 				switch($changeType){
 					//西元轉民國(年月日)
@@ -168,11 +271,11 @@
 					break;
 					//日期轉時間秒數?
 					case "CTime":
-						$dateStr = strtotime($Date);
+						$dateStr = date("Y-m-d");
 					break;
 					//取得現在時間秒數?
 					case "CTime_Now":
-						$dateStr = time();
+						$dateStr = date("Y-m-d H:i:s");
 					break;
 				}
 				return $dateStr;
@@ -187,6 +290,18 @@
 		//json轉換成資料轉(decode)
 		public function Json2Data($JsonData){
 			return json_decode($JsonData);
+		}
+
+		//資料內容取代
+		public function ContentReplace($processData,$replaceContent){
+			if(is_array($processData)){
+				foreach ($processData as $key => $content) {
+					$replaceContent = str_replace("@@".$key."@@", $content, $replaceContent);
+				}
+				return $replaceContent;
+			}else{
+				return false;
+			}
 		}
 	#modDataFormate結束
 		
@@ -216,5 +331,35 @@
 			echo "</pre>";
 		}
 	#modArrayDebug結束
+	#modCurl取得網址相關內容
+		public function UrlDataPost($url, $SendArray) {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL,$url);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);	//quick fix for SSL
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $SendArray);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);  //skip ssl verify
+															
+			$response = curl_exec($ch);
+			curl_close ($ch);
+			
+			return $response;
+		}
+		
+		public function UrlDataGet($url) {
+
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($ch, CURLOPT_URL, $url );
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);  //skip ssl verify
+															
+			$result = curl_exec($ch);
+			curl_close ($ch);
+
+			return $result;
+		}
+	#modCurl結束
 	}
 ?>
